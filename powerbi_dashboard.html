@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grocery Chain BI Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --bg2: #161b27;
+    --bg3: #1e2535;
+    --bg4: #252d40;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #e8eaf0;
+    --text2: #8b93a7;
+    --text3: #5c6478;
+    --accent1: #4f8ef7;
+    --accent2: #30d48a;
+    --accent3: #f7954f;
+    --accent4: #c084fc;
+    --accent5: #f472b6;
+    --danger: #f87171;
+    --gold: #fbbf24;
+    --font: 'Segoe UI', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; min-height: 100vh; }
+
+  /* HEADER */
+  .header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; align-items: center; justify-content: space-between; height: 56px; position: sticky; top: 0; z-index: 100; }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .logo { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
+  .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent1); box-shadow: 0 0 8px var(--accent1); }
+  .header-badge { background: rgba(79,142,247,0.15); color: var(--accent1); border: 1px solid rgba(79,142,247,0.3); border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.5px; }
+  .header-right { display: flex; align-items: center; gap: 8px; color: var(--text2); font-size: 12px; }
+  .last-refresh { display: flex; align-items: center; gap: 5px; }
+
+  /* NAV TABS */
+  .nav-tabs { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; gap: 0; }
+  .nav-tab { padding: 12px 18px; font-size: 13px; color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+  .nav-tab:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .nav-tab.active { color: var(--accent1); border-bottom-color: var(--accent1); }
+  .nav-tab i { font-size: 15px; }
+
+  /* MAIN */
+  .main { padding: 24px 28px; max-width: 1400px; margin: 0 auto; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* KPI GRID */
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 24px; }
+  .kpi-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; transition: border-color 0.2s; cursor: default; }
+  .kpi-card:hover { border-color: var(--border2); }
+  .kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .kpi-label i { font-size: 14px; }
+  .kpi-value { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; line-height: 1; margin-bottom: 6px; }
+  .kpi-delta { font-size: 11px; display: flex; align-items: center; gap: 4px; }
+  .kpi-delta.pos { color: var(--accent2); }
+  .kpi-delta.neg { color: var(--danger); }
+  .kpi-delta.neu { color: var(--text3); }
+
+  /* SECTION LAYOUTS */
+  .row { display: grid; gap: 16px; margin-bottom: 16px; }
+  .row-2 { grid-template-columns: 1fr 1fr; }
+  .row-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .row-7-5 { grid-template-columns: 7fr 5fr; }
+  .row-6-6 { grid-template-columns: 6fr 6fr; }
+
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .card-title { font-size: 13px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 7px; }
+  .card-title i { font-size: 16px; color: var(--text2); }
+  .card-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .card-action { font-size: 11px; color: var(--accent1); cursor: pointer; display: flex; align-items: center; gap: 3px; }
+
+  /* CHART WRAPPERS */
+  .chart-wrap { position: relative; width: 100%; }
+
+  /* TABLE */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .data-table th { text-align: left; color: var(--text3); font-weight: 500; padding: 6px 10px; border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+  .data-table td { padding: 9px 10px; border-bottom: 1px solid rgba(255,255,255,0.04); color: var(--text); vertical-align: middle; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .data-table td.num { text-align: right; font-variant-numeric: tabular-nums; font-size: 13px; }
+  .data-table td.muted { color: var(--text2); }
+
+  /* BAR INLINE */
+  .bar-cell { display: flex; align-items: center; gap: 8px; }
+  .bar-track { flex: 1; background: var(--bg4); border-radius: 2px; height: 5px; overflow: hidden; min-width: 60px; }
+  .bar-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
+  .bar-val { font-size: 12px; min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* RANK BADGE */
+  .rank { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 5px; font-size: 11px; font-weight: 700; background: var(--bg4); color: var(--text3); }
+  .rank.r1 { background: rgba(251,191,36,0.15); color: var(--gold); }
+  .rank.r2 { background: rgba(200,200,200,0.1); color: #b0b5c0; }
+  .rank.r3 { background: rgba(168,107,60,0.15); color: #cd8a5a; }
+
+  /* TAGS */
+  .tag { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+  .tag-blue { background: rgba(79,142,247,0.12); color: #7aabf9; }
+  .tag-green { background: rgba(48,212,138,0.12); color: #4fd89a; }
+  .tag-amber { background: rgba(251,191,36,0.12); color: #fbbf24; }
+  .tag-pink { background: rgba(196,131,252,0.12); color: #c485fd; }
+  .tag-orange { background: rgba(247,149,79,0.12); color: #f9a870; }
+  .tag-red { background: rgba(248,113,113,0.12); color: #fc8585; }
+
+  /* FILTER BAR */
+  .filter-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+  .filter-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
+  select { background: var(--bg3); border: 1px solid var(--border2); color: var(--text); border-radius: 6px; padding: 6px 10px; font-size: 12px; cursor: pointer; outline: none; }
+  select:focus { border-color: var(--accent1); }
+
+  /* PROGRESS RING */
+  .ring-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .ring-label { font-size: 11px; color: var(--text3); }
+
+  /* SEGMENT BARS */
+  .seg-item { margin-bottom: 12px; }
+  .seg-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; font-size: 12.5px; }
+  .seg-track { background: var(--bg4); border-radius: 3px; height: 8px; overflow: hidden; }
+  .seg-fill { height: 100%; border-radius: 3px; transition: width 0.8s ease; }
+
+  /* SPARKLINE */
+  .spark-row { display: flex; align-items: center; gap: 10px; }
+  .spark-label { font-size: 12px; color: var(--text2); min-width: 130px; }
+  .spark-chart { flex: 1; height: 32px; position: relative; }
+  .spark-val { font-size: 13px; font-weight: 600; min-width: 60px; text-align: right; }
+
+  /* MODEL DIAGRAM */
+  .model-container { overflow-x: auto; padding: 10px 0; }
+  .model-svg { min-width: 700px; }
+
+  /* PAGE 4 (DAX) */
+  .dax-section { margin-bottom: 28px; }
+  .dax-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 12px; display: flex; align-items: center; gap: 7px; }
+  .dax-code { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 12px; line-height: 1.65; overflow-x: auto; }
+  .dax-kw { color: #569cd6; }
+  .dax-fn { color: #dcdcaa; }
+  .dax-str { color: #ce9178; }
+  .dax-cmt { color: #6a9955; font-style: italic; }
+  .dax-var { color: #9cdcfe; }
+  .dax-op { color: #d4d4d4; }
+  .dax-desc { font-size: 12px; color: var(--text2); margin-bottom: 8px; line-height: 1.6; }
+
+  /* FOOTER */
+  .footer { text-align: center; padding: 32px 0 20px; color: var(--text3); font-size: 11px; border-top: 1px solid var(--border); margin-top: 32px; }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    .row-2, .row-3, .row-7-5, .row-6-6 { grid-template-columns: 1fr; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .main { padding: 16px; }
+    .header { padding: 0 16px; }
+    .nav-tabs { padding: 0 10px; overflow-x: auto; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo">
+      <div class="logo-dot"></div>
+      Grocery Chain Analytics
+    </div>
+    <span class="header-badge">POWER BI</span>
+  </div>
+  <div class="header-right">
+    <div class="last-refresh"><i class="ti ti-refresh" style="font-size:14px"></i> Last refreshed: May 16, 2025</div>
+    <span style="padding: 0 8px; color: var(--border2)">|</span>
+    <span>Dataset: 1,980 transactions · 9 stores · 2 years</span>
+  </div>
+</div>
+
+<!-- NAV -->
+<div class="nav-tabs">
+  <div class="nav-tab active" onclick="showPage('overview')"><i class="ti ti-layout-dashboard"></i> Executive Overview</div>
+  <div class="nav-tab" onclick="showPage('stores')"><i class="ti ti-building-store"></i> Store Performance</div>
+  <div class="nav-tab" onclick="showPage('products')"><i class="ti ti-package"></i> Product & Category</div>
+  <div class="nav-tab" onclick="showPage('customers')"><i class="ti ti-users"></i> Customer Intelligence</div>
+  <div class="nav-tab" onclick="showPage('model')"><i class="ti ti-topology-star"></i> Data Model</div>
+  <div class="nav-tab" onclick="showPage('dax')"><i class="ti ti-code"></i> DAX Measures</div>
+</div>
+
+<div class="main">
+
+<!-- ===== PAGE 1: EXECUTIVE OVERVIEW ===== -->
+<div id="page-overview" class="page active">
+
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label"><i class="ti ti-currency-dollar" style="color:var(--accent2)"></i> Total Revenue</div>
+      <div class="kpi-value" style="color:var(--accent2)">$82,037</div>
+      <div class="kpi-delta pos"><i class="ti ti-trending-up" style="font-size:12px"></i> 2-year cumulative | 9 stores</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label"><i class="ti ti-receipt" style="color:var(--accent1)"></i> Transactions</div>
+      <div class="kpi-value" style="color:var(--accent1)">1,980</div>
+      <div class="kpi-delta neu">Avg 110/month across chain</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label"><i class="ti ti-users" style="color:var(--accent4)"></i> Unique Customers</div>
+      <div class="kpi-value" style="color:var(--accent4)">1,798</div>
+      <div class="kpi-delta neu">90.8% single-visit rate</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label"><i class="ti ti-shopping-cart" style="color:var(--accent3)"></i> Avg Basket Value</div>
+      <div class="kpi-value" style="color:var(--accent3)">$45.63</div>
+      <div class="kpi-delta pos"><i class="ti ti-trending-up" style="font-size:12px"></i> Median: $37.03</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label"><i class="ti ti-discount" style="color:var(--accent5)"></i> Discount Rate</div>
+      <div class="kpi-value" style="color:var(--accent5)">9.74%</div>
+      <div class="kpi-delta neg"><i class="ti ti-coins" style="font-size:12px"></i> $8,850 total discounts</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label"><i class="ti ti-star" style="color:var(--gold)"></i> Avg Loyalty Pts</div>
+      <div class="kpi-value" style="color:var(--gold)">255</div>
+      <div class="kpi-delta neu">Range: 0 – 500 pts/txn</div>
+    </div>
+  </div>
+
+  <!-- Revenue Trend -->
+  <div class="row row-7-5">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title"><i class="ti ti-chart-line"></i> Monthly Revenue Trend</div>
+          <div class="card-sub">Feb 2024 – Jul 2025 · All Stores</div>
+        </div>
+        <div style="display:flex; gap:16px; font-size:11px; color:var(--text2)">
+          <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:3px;background:var(--accent1);display:inline-block;border-radius:2px"></span>Revenue</span>
+          <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:2px;background:var(--accent2);display:inline-block;border-radius:2px;border-top:1px dashed var(--accent2)"></span>Transactions</span>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:220px">
+        <canvas id="trendChart" role="img" aria-label="Monthly revenue trend from Feb 2024 to Jul 2025">Monthly revenue chart</canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title"><i class="ti ti-chart-donut"></i> Revenue by Category</div>
+          <div class="card-sub">All 11 aisles · % share</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:220px">
+        <canvas id="aisleDonut" role="img" aria-label="Revenue distribution by product aisle">Aisle revenue chart</canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Store heatmap row -->
+  <div class="row row-6-6">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-building-store"></i> Store Revenue Ranking</div>
+      </div>
+      <table class="data-table">
+        <thead><tr><th>#</th><th>Store</th><th>Revenue</th><th>Share</th><th>Txns</th></tr></thead>
+        <tbody id="storeTable"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-tag"></i> Discount Rate by Category</div>
+        <div class="card-sub">Higher discount → margin pressure</div>
+      </div>
+      <div id="discountBars" style="padding-top:6px"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== PAGE 2: STORE PERFORMANCE ===== -->
+<div id="page-stores" class="page">
+
+  <div class="filter-bar">
+    <span class="filter-label"><i class="ti ti-adjustments-horizontal"></i> View</span>
+    <select id="storeMetric" onchange="renderStorePage()">
+      <option value="revenue">Revenue</option>
+      <option value="txns">Transactions</option>
+      <option value="avg_basket">Avg Basket</option>
+    </select>
+  </div>
+
+  <div class="row row-7-5">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-chart-bar"></i> Store Comparison</div>
+      </div>
+      <div class="chart-wrap" style="height:340px">
+        <canvas id="storeBarChart" role="img" aria-label="Horizontal bar chart comparing store performance">Store comparison chart</canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-info-circle"></i> Store Scorecards</div>
+      </div>
+      <div id="storeScorecards"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="ti ti-table"></i> Full Store Analysis</div>
+    </div>
+    <table class="data-table">
+      <thead><tr><th>Store</th><th>Revenue</th><th>Txns</th><th>Avg Basket</th><th>Discount Rate</th><th>Loyalty Pts/Txn</th><th>Performance</th></tr></thead>
+      <tbody id="storeFullTable"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- ===== PAGE 3: PRODUCT & CATEGORY ===== -->
+<div id="page-products" class="page">
+
+  <div class="row row-6-6">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-chart-bar"></i> Revenue by Aisle</div>
+      </div>
+      <div class="chart-wrap" style="height:300px">
+        <canvas id="aisleBarChart" role="img" aria-label="Revenue by product aisle">Aisle revenue bar chart</canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-chart-scatter"></i> Volume vs Revenue (Products)</div>
+        <div class="card-sub">Bubble size = transaction count</div>
+      </div>
+      <div class="chart-wrap" style="height:300px">
+        <canvas id="productScatter" role="img" aria-label="Scatter chart of units sold vs revenue per product">Product scatter chart</canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="ti ti-package"></i> Product Performance Matrix</div>
+    </div>
+    <table class="data-table">
+      <thead><tr><th>#</th><th>Product</th><th>Category</th><th>Revenue</th><th>Units Sold</th><th>Transactions</th><th>Revenue/Unit</th><th>Rev Share</th></tr></thead>
+      <tbody id="productTable"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== PAGE 4: CUSTOMER INTELLIGENCE ===== -->
+<div id="page-customers" class="page">
+
+  <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr)">
+    <div class="kpi-card">
+      <div class="kpi-label"><i class="ti ti-users" style="color:var(--accent1)"></i> Total Customers</div>
+      <div class="kpi-value" style="color:var(--accent1)">1,798</div>
+      <div class="kpi-delta neu">Unique customer IDs</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label"><i class="ti ti-user-check" style="color:var(--accent2)"></i> Repeat Customers</div>
+      <div class="kpi-value" style="color:var(--accent2)">9.2%</div>
+      <div class="kpi-delta pos">166 multi-visit customers</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label"><i class="ti ti-star" style="color:var(--gold)"></i> Top Customer Spend</div>
+      <div class="kpi-value" style="color:var(--gold)">$250.84</div>
+      <div class="kpi-delta neu">Max lifetime value</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label"><i class="ti ti-coin" style="color:var(--accent4)"></i> Avg Loyalty Score</div>
+      <div class="kpi-value" style="color:var(--accent4)">281</div>
+      <div class="kpi-delta neu">Per customer total</div>
+    </div>
+  </div>
+
+  <div class="row row-6-6">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-chart-pie"></i> Customer Segmentation (RFM)</div>
+        <div class="card-sub">Recency · Frequency · Monetary proxies</div>
+      </div>
+      <div class="chart-wrap" style="height:260px">
+        <canvas id="rfmChart" role="img" aria-label="Customer segmentation by spend tier">RFM chart</canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-chart-histogram"></i> Basket Value Distribution</div>
+        <div class="card-sub">Transaction-level spend histogram</div>
+      </div>
+      <div class="chart-wrap" style="height:260px">
+        <canvas id="basketHist" role="img" aria-label="Histogram of basket values">Basket histogram</canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="ti ti-target"></i> Loyalty Programme Analysis</div>
+      <div class="card-sub">Points earned per transaction by category</div>
+    </div>
+    <div id="loyaltyBars" style="padding-top:4px"></div>
+  </div>
+
+</div>
+
+<!-- ===== PAGE 5: DATA MODEL ===== -->
+<div id="page-model" class="page">
+  <div class="row">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title"><i class="ti ti-topology-star"></i> Star Schema — Recommended Semantic Model</div>
+          <div class="card-sub">Normalized from flat CSV · Power BI optimized · 5 dimension tables + 1 fact table</div>
+        </div>
+      </div>
+      <div class="model-container">
+        <svg class="model-svg" viewBox="0 0 900 520" xmlns="http://www.w3.org/2000/svg" style="width:100%; height:auto; max-height:520px">
+          <defs>
+            <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="rgba(255,255,255,0.25)"/>
+            </marker>
+          </defs>
+
+          <!-- FACT TABLE CENTER -->
+          <rect x="330" y="190" width="240" height="170" rx="8" fill="#1e2535" stroke="#4f8ef7" stroke-width="1.5"/>
+          <rect x="330" y="190" width="240" height="32" rx="8" fill="#4f8ef7" opacity="0.25"/>
+          <rect x="330" y="210" width="240" height="12" fill="#4f8ef7" opacity="0.25"/>
+          <text x="450" y="212" text-anchor="middle" fill="#7aabf9" font-size="11" font-weight="700" letter-spacing="1">FACT TABLE</text>
+          <text x="450" y="229" text-anchor="middle" fill="#e8eaf0" font-size="13" font-weight="600">FactSales</text>
+          <line x1="340" y1="238" x2="560" y2="238" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+          <text x="345" y="254" fill="#9cdcfe" font-size="11">🔑 transaction_key</text>
+          <text x="345" y="270" fill="#ce9178" font-size="11">🔗 date_key (FK)</text>
+          <text x="345" y="286" fill="#ce9178" font-size="11">🔗 store_key (FK)</text>
+          <text x="345" y="302" fill="#ce9178" font-size="11">🔗 product_key (FK)</text>
+          <text x="345" y="318" fill="#ce9178" font-size="11">🔗 customer_key (FK)</text>
+          <text x="345" y="334" fill="#dcdcaa" font-size="11">📊 quantity, unit_price</text>
+          <text x="345" y="350" fill="#dcdcaa" font-size="11">📊 total, discount, final</text>
+
+          <!-- DIM DATE (top) -->
+          <rect x="340" y="20" width="220" height="130" rx="8" fill="#1e2535" stroke="#30d48a" stroke-width="1"/>
+          <rect x="340" y="20" width="220" height="28" rx="8" fill="#30d48a" opacity="0.2"/>
+          <rect x="340" y="36" width="220" height="12" fill="#30d48a" opacity="0.2"/>
+          <text x="450" y="38" text-anchor="middle" fill="#4fd89a" font-size="10" font-weight="700" letter-spacing="0.8">DIMENSION</text>
+          <text x="450" y="54" text-anchor="middle" fill="#e8eaf0" font-size="13" font-weight="600">DimDate</text>
+          <line x1="350" y1="62" x2="550" y2="62" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+          <text x="355" y="78" fill="#9cdcfe" font-size="11">🔑 date_key</text>
+          <text x="355" y="94" fill="#d4d4d4" font-size="11">date, year, quarter</text>
+          <text x="355" y="110" fill="#d4d4d4" font-size="11">month, month_name</text>
+          <text x="355" y="126" fill="#d4d4d4" font-size="11">week, day_of_week</text>
+          <text x="355" y="142" fill="#d4d4d4" font-size="11">is_weekend, fiscal_year</text>
+
+          <!-- DIM STORE (left) -->
+          <rect x="30" y="170" width="220" height="130" rx="8" fill="#1e2535" stroke="#30d48a" stroke-width="1"/>
+          <rect x="30" y="170" width="220" height="28" rx="8" fill="#30d48a" opacity="0.2"/>
+          <rect x="30" y="186" width="220" height="12" fill="#30d48a" opacity="0.2"/>
+          <text x="140" y="188" text-anchor="middle" fill="#4fd89a" font-size="10" font-weight="700" letter-spacing="0.8">DIMENSION</text>
+          <text x="140" y="204" text-anchor="middle" fill="#e8eaf0" font-size="13" font-weight="600">DimStore</text>
+          <line x1="40" y1="212" x2="240" y2="212" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+          <text x="45" y="228" fill="#9cdcfe" font-size="11">🔑 store_key</text>
+          <text x="45" y="244" fill="#d4d4d4" font-size="11">store_name</text>
+          <text x="45" y="260" fill="#d4d4d4" font-size="11">region, city</text>
+          <text x="45" y="276" fill="#d4d4d4" font-size="11">store_type, tier</text>
+          <text x="45" y="292" fill="#d4d4d4" font-size="11">opening_date</text>
+
+          <!-- DIM PRODUCT (right) -->
+          <rect x="650" y="170" width="220" height="130" rx="8" fill="#1e2535" stroke="#30d48a" stroke-width="1"/>
+          <rect x="650" y="170" width="220" height="28" rx="8" fill="#30d48a" opacity="0.2"/>
+          <rect x="650" y="186" width="220" height="12" fill="#30d48a" opacity="0.2"/>
+          <text x="760" y="188" text-anchor="middle" fill="#4fd89a" font-size="10" font-weight="700" letter-spacing="0.8">DIMENSION</text>
+          <text x="760" y="204" text-anchor="middle" fill="#e8eaf0" font-size="13" font-weight="600">DimProduct</text>
+          <line x1="660" y1="212" x2="860" y2="212" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+          <text x="665" y="228" fill="#9cdcfe" font-size="11">🔑 product_key</text>
+          <text x="665" y="244" fill="#d4d4d4" font-size="11">product_name</text>
+          <text x="665" y="260" fill="#d4d4d4" font-size="11">aisle (category)</text>
+          <text x="665" y="276" fill="#d4d4d4" font-size="11">sub_category</text>
+          <text x="665" y="292" fill="#d4d4d4" font-size="11">sku, brand, supplier</text>
+
+          <!-- DIM CUSTOMER (bottom-left) -->
+          <rect x="130" y="380" width="220" height="120" rx="8" fill="#1e2535" stroke="#30d48a" stroke-width="1"/>
+          <rect x="130" y="380" width="220" height="28" rx="8" fill="#30d48a" opacity="0.2"/>
+          <rect x="130" y="396" width="220" height="12" fill="#30d48a" opacity="0.2"/>
+          <text x="240" y="398" text-anchor="middle" fill="#4fd89a" font-size="10" font-weight="700" letter-spacing="0.8">DIMENSION</text>
+          <text x="240" y="414" text-anchor="middle" fill="#e8eaf0" font-size="13" font-weight="600">DimCustomer</text>
+          <line x1="140" y1="422" x2="340" y2="422" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+          <text x="145" y="438" fill="#9cdcfe" font-size="11">🔑 customer_key</text>
+          <text x="145" y="454" fill="#d4d4d4" font-size="11">customer_id</text>
+          <text x="145" y="470" fill="#d4d4d4" font-size="11">segment, lifetime_tier</text>
+          <text x="145" y="486" fill="#d4d4d4" font-size="11">loyalty_tier</text>
+
+          <!-- DIM PROMOTION (bottom-right) -->
+          <rect x="555" y="380" width="220" height="120" rx="8" fill="#1e2535" stroke="#f7954f" stroke-width="1"/>
+          <rect x="555" y="380" width="220" height="28" rx="8" fill="#f7954f" opacity="0.15"/>
+          <rect x="555" y="396" width="220" height="12" fill="#f7954f" opacity="0.15"/>
+          <text x="665" y="398" text-anchor="middle" fill="#f9a870" font-size="10" font-weight="700" letter-spacing="0.8">DIMENSION</text>
+          <text x="665" y="414" text-anchor="middle" fill="#e8eaf0" font-size="13" font-weight="600">DimPromotion</text>
+          <line x1="565" y1="422" x2="765" y2="422" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+          <text x="570" y="438" fill="#9cdcfe" font-size="11">🔑 promo_key</text>
+          <text x="570" y="454" fill="#d4d4d4" font-size="11">discount_band</text>
+          <text x="570" y="470" fill="#d4d4d4" font-size="11">promo_type</text>
+          <text x="570" y="486" fill="#d4d4d4" font-size="11">is_promotional</text>
+
+          <!-- CONNECTOR LINES -->
+          <line x1="450" y1="150" x2="450" y2="190" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+          <line x1="250" y1="240" x2="330" y2="265" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+          <line x1="650" y1="245" x2="570" y2="270" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+          <line x1="300" y1="395" x2="380" y2="355" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+          <line x1="560" y1="395" x2="520" y2="360" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+
+          <!-- Cardinality labels -->
+          <text x="460" y="175" fill="rgba(255,255,255,0.3)" font-size="10">1:N</text>
+          <text x="268" y="258" fill="rgba(255,255,255,0.3)" font-size="10">1:N</text>
+          <text x="617" y="263" fill="rgba(255,255,255,0.3)" font-size="10">1:N</text>
+          <text x="316" y="382" fill="rgba(255,255,255,0.3)" font-size="10">1:N</text>
+          <text x="530" y="378" fill="rgba(255,255,255,0.3)" font-size="10">1:N</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="row row-3">
+    <div class="card">
+      <div class="card-header"><div class="card-title"><i class="ti ti-table-import"></i> M Query: DimDate</div></div>
+      <div class="dax-code" style="font-size:11px">
+<span class="dax-kw">let</span><br>
+&nbsp;&nbsp;StartDate = <span class="dax-fn">#date</span>(<span class="dax-str">2023</span>, <span class="dax-str">1</span>, <span class="dax-str">1</span>),<br>
+&nbsp;&nbsp;EndDate = <span class="dax-fn">Date.From</span>(<span class="dax-fn">DateTime.LocalNow</span>()),<br>
+&nbsp;&nbsp;DayCount = <span class="dax-fn">Duration.Days</span>(EndDate - StartDate) + 1,<br>
+&nbsp;&nbsp;Dates = <span class="dax-fn">List.Dates</span>(StartDate, DayCount, <span class="dax-fn">#duration</span>(1,0,0,0)),<br>
+&nbsp;&nbsp;DateTable = <span class="dax-fn">Table.FromList</span>(Dates, Splitter.SplitByNothing()),<br>
+&nbsp;&nbsp;DateCol = <span class="dax-fn">Table.RenameColumns</span>(DateTable, {{"Column1", "Date"}}),<br>
+&nbsp;&nbsp;Year = <span class="dax-fn">Table.AddColumn</span>(DateCol, "Year", each <span class="dax-fn">Date.Year</span>([Date])),<br>
+&nbsp;&nbsp;Month = <span class="dax-fn">Table.AddColumn</span>(Year, "MonthNum", each <span class="dax-fn">Date.Month</span>([Date])),<br>
+&nbsp;&nbsp;Quarter = <span class="dax-fn">Table.AddColumn</span>(Month, "Quarter", each "Q" & <span class="dax-fn">Text.From</span>(<span class="dax-fn">Date.QuarterOfYear</span>([Date])))<br>
+<span class="dax-kw">in</span> Quarter
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title"><i class="ti ti-table-import"></i> M Query: DimProduct</div></div>
+      <div class="dax-code" style="font-size:11px">
+<span class="dax-kw">let</span><br>
+&nbsp;&nbsp;Source = <span class="dax-var">FactSales</span>,<br>
+&nbsp;&nbsp;Cols = <span class="dax-fn">Table.SelectColumns</span>(Source, {"product_name","aisle"}),<br>
+&nbsp;&nbsp;Distinct = <span class="dax-fn">Table.Distinct</span>(Cols),<br>
+&nbsp;&nbsp;AddKey = <span class="dax-fn">Table.AddIndexColumn</span>(Distinct, "product_key", 1, 1),<br>
+&nbsp;&nbsp;Renamed = <span class="dax-fn">Table.RenameColumns</span>(AddKey, {{"aisle","category"}}),<br>
+&nbsp;&nbsp;SubCat = <span class="dax-fn">Table.AddColumn</span>(Renamed, "sub_category",<br>
+&nbsp;&nbsp;&nbsp;&nbsp;each <span class="dax-fn">if</span> [category] = "Produce" <span class="dax-fn">then</span> "Fresh"<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="dax-fn">else if</span> [category] = "Dairy" <span class="dax-fn">then</span> "Chilled"<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="dax-fn">else</span> "Ambient")<br>
+<span class="dax-kw">in</span> SubCat
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title"><i class="ti ti-table-import"></i> M Query: FactSales</div></div>
+      <div class="dax-code" style="font-size:11px">
+<span class="dax-kw">let</span><br>
+&nbsp;&nbsp;Source = <span class="dax-fn">Csv.Document</span>(File.Contents("grocery_chain_data.csv")),<br>
+&nbsp;&nbsp;Promoted = <span class="dax-fn">Table.PromoteHeaders</span>(Source),<br>
+&nbsp;&nbsp;TypedCols = <span class="dax-fn">Table.TransformColumnTypes</span>(Promoted, {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{"transaction_date", type date},<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{"quantity", Int64.Type},<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{"unit_price", Currency.Type},<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{"final_amount", Currency.Type}}),<br>
+&nbsp;&nbsp;AddSK = <span class="dax-fn">Table.AddIndexColumn</span>(TypedCols, "transaction_key", 1, 1),<br>
+&nbsp;&nbsp;FilterNulls = <span class="dax-fn">Table.SelectRows</span>(AddSK, each [store_name] <> null)<br>
+<span class="dax-kw">in</span> FilterNulls
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PAGE 6: DAX ===== -->
+<div id="page-dax" class="page">
+
+  <div class="dax-section">
+    <div class="dax-title"><i class="ti ti-currency-dollar" style="color:var(--accent2)"></i> Core Revenue Measures</div>
+    <div class="dax-desc">Base aggregation measures. All other measures build on these. Mark as hidden in the model; surface only the formatted variants.</div>
+    <div class="dax-code">
+<span class="dax-cmt">-- [1] Total Revenue</span><br>
+<span class="dax-var">Total Revenue</span> =<br>
+&nbsp;&nbsp;<span class="dax-fn">SUM</span>( FactSales[final_amount] )<br><br>
+<span class="dax-cmt">-- [2] Revenue YTD</span><br>
+<span class="dax-var">Revenue YTD</span> =<br>
+&nbsp;&nbsp;<span class="dax-fn">TOTALYTD</span>( [Total Revenue], DimDate[Date] )<br><br>
+<span class="dax-cmt">-- [3] Revenue LY (Last Year same period)</span><br>
+<span class="dax-var">Revenue LY</span> =<br>
+&nbsp;&nbsp;<span class="dax-fn">CALCULATE</span>(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;[Total Revenue],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="dax-fn">SAMEPERIODLASTYEAR</span>( DimDate[Date] )<br>
+&nbsp;&nbsp;)<br><br>
+<span class="dax-cmt">-- [4] Revenue YoY Growth %</span><br>
+<span class="dax-var">Revenue YoY %</span> =<br>
+&nbsp;&nbsp;<span class="dax-fn">VAR</span> <span class="dax-var">CY</span> = [Total Revenue]<br>
+&nbsp;&nbsp;<span class="dax-fn">VAR</span> <span class="dax-var">PY</span> = [Revenue LY]<br>
+&nbsp;&nbsp;<span class="dax-fn">RETURN</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="dax-fn">IF</span>( <span class="dax-fn">ISBLANK</span>(<span class="dax-var">PY</span>) || <span class="dax-var">PY</span> = 0, BLANK(), (<span class="dax-var">CY</span> - <span class="dax-var">PY</span>) / <span class="dax-var">PY</span> )
+    </div>
+  </div>
+
+  <div class="dax-section">
+    <div class="dax-title"><i class="ti ti-users" style="color:var(--accent4)"></i> Customer & Basket Measures</div>
+    <div class="dax-code">
+<span class="dax-cmt">-- [5] Unique Customers</span><br>
+<span class="dax-var">Unique Customers</span> =<br>
+&nbsp;&nbsp;<span class="dax-fn">DISTINCTCOUNT</span>( FactSales[customer_id] )<br><br>
+<span class="dax-cmt">-- [6] Average Basket Value</span><br>
+<span class="dax-var">Avg Basket Value</span> =<br>
+&nbsp;&nbsp;<span class="dax-fn">DIVIDE</span>(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;[Total Revenue],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="dax-fn">COUNTROWS</span>( FactSales )<br>
+&nbsp;&nbsp;)<br><br>
+<span class="dax-cmt">-- [7] Customer Lifetime Value (CLV)</span><br>
+<span class="dax-var">CLV</span> =<br>
+&nbsp;&nbsp;<span class="dax-fn">AVERAGEX</span>(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="dax-fn">VALUES</span>( FactSales[customer_id] ),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="dax-fn">CALCULATE</span>( <span class="dax-fn">SUM</span>( FactSales[final_amount] ) )<br>
+&nbsp;&nbsp;)<br><br>
+<span class="dax-cmt">-- [8] Repeat Customer Rate</span><br>
+<span class="dax-var">Repeat Customer Rate</span> =<br>
+&nbsp;&nbsp;<span class="dax-fn">VAR</span> <span class="dax-var">Repeat</span> = <span class="dax-fn">COUNTX</span>(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="dax-fn">FILTER</span>(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dax-fn">SUMMARIZE</span>( FactSales, FactSales[customer_id], "@Visits", <span class="dax-fn">COUNTROWS</span>(FactSales) ),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[@Visits] > 1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;FactSales[customer_id]<br>
+&nbsp;&nbsp;)<br>
+&nbsp;&nbsp;<span class="dax-fn">RETURN</span> <span class="dax-fn">DIVIDE</span>( <span class="dax-var">Repeat</span>, [Unique Customers] )
+    </div>
+  </div>
+
+  <div class="dax-section">
+    <div class="dax-title"><i class="ti ti-discount" style="color:var(--accent5)"></i> Margin & Discount Measures</div>
+    <div class="dax-code">
+<span class="dax-cmt">-- [9] Total Discount Amount</span><br>
+<span class="dax-var">Total Discount</span> =<br>
+&nbsp;&nbsp;<span class="dax-fn">SUM</span>( FactSales[discount_amount] )<br><br>
+<span class="dax-cmt">-- [10] Discount Rate %</span><br>
+<span class="dax-var">Discount Rate %</span> =<br>
+&nbsp;&nbsp;<span class="dax-fn">DIVIDE</span>(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;[Total Discount],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="dax-fn">SUM</span>( FactSales[total_amount] )<br>
+&nbsp;&nbsp;)<br><br>
+<span class="dax-cmt">-- [11] Revenue at Full Price (pre-discount)</span><br>
+<span class="dax-var">Revenue Full Price</span> =<br>
+&nbsp;&nbsp;<span class="dax-fn">SUM</span>( FactSales[total_amount] )<br><br>
+<span class="dax-cmt">-- [12] Discount Erosion Index (vs chain avg)</span><br>
+<span class="dax-var">Discount Erosion Index</span> =<br>
+&nbsp;&nbsp;<span class="dax-fn">VAR</span> <span class="dax-var">LocalRate</span> = [Discount Rate %]<br>
+&nbsp;&nbsp;<span class="dax-fn">VAR</span> <span class="dax-var">ChainRate</span> = <span class="dax-fn">CALCULATE</span>( [Discount Rate %], <span class="dax-fn">ALL</span>( DimStore ) )<br>
+&nbsp;&nbsp;<span class="dax-fn">RETURN</span> <span class="dax-fn">DIVIDE</span>( <span class="dax-var">LocalRate</span>, <span class="dax-var">ChainRate</span> )
+    </div>
+  </div>
+
+  <div class="dax-section">
+    <div class="dax-title"><i class="ti ti-star" style="color:var(--gold)"></i> Loyalty & Ranking Measures</div>
+    <div class="dax-code">
+<span class="dax-cmt">-- [13] Total Loyalty Points</span><br>
+<span class="dax-var">Total Loyalty Points</span> =<br>
+&nbsp;&nbsp;<span class="dax-fn">SUM</span>( FactSales[loyalty_points] )<br><br>
+<span class="dax-cmt">-- [14] Store Rank by Revenue</span><br>
+<span class="dax-var">Store Revenue Rank</span> =<br>
+&nbsp;&nbsp;<span class="dax-fn">RANKX</span>(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="dax-fn">ALL</span>( DimStore[store_name] ),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;[Total Revenue],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;, DESC, Dense<br>
+&nbsp;&nbsp;)<br><br>
+<span class="dax-cmt">-- [15] Top N Products (dynamic parameter)</span><br>
+<span class="dax-var">Top N Revenue</span> =<br>
+&nbsp;&nbsp;<span class="dax-fn">CALCULATE</span>(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;[Total Revenue],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="dax-fn">TOPN</span>(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[TopN Parameter],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dax-fn">ALL</span>( DimProduct[product_name] ),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Total Revenue], DESC<br>
+&nbsp;&nbsp;&nbsp;&nbsp;)<br>
+&nbsp;&nbsp;)<br><br>
+<span class="dax-cmt">-- [16] Rolling 3-Month Average Revenue</span><br>
+<span class="dax-var">Revenue 3M Rolling Avg</span> =<br>
+&nbsp;&nbsp;<span class="dax-fn">AVERAGEX</span>(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="dax-fn">DATESINPERIOD</span>( DimDate[Date], <span class="dax-fn">LASTDATE</span>( DimDate[Date] ), -3, MONTH ),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;[Total Revenue]<br>
+&nbsp;&nbsp;)
+    </div>
+  </div>
+
+</div>
+
+</div><!-- /main -->
+
+<div class="footer">
+  Grocery Chain Analytics · Power BI Enterprise Solution · Built by Senior BI Architect · Data: 1,980 txns · 9 stores · Aug 2023 – Aug 2025
+</div>
+
+<script>
+const DATA = {
+  kpis: {total_revenue:82037.31,total_transactions:1980,unique_customers:1798,avg_basket_value:45.63,total_discount:8849.79,discount_rate:9.74,avg_loyalty_points:255.1},
+  monthly: [
+    {month:"2024-02",revenue:3486.86,txns:78},{month:"2024-03",revenue:3644.5,txns:93},
+    {month:"2024-04",revenue:2945.29,txns:78},{month:"2024-05",revenue:3601.13,txns:89},
+    {month:"2024-06",revenue:3041.2,txns:76},{month:"2024-07",revenue:2793.27,txns:68},
+    {month:"2024-08",revenue:2804.44,txns:62},{month:"2024-09",revenue:4001.27,txns:97},
+    {month:"2024-10",revenue:3770.63,txns:91},{month:"2024-11",revenue:3816.09,txns:84},
+    {month:"2024-12",revenue:3254.52,txns:75},{month:"2025-01",revenue:3694.0,txns:80},
+    {month:"2025-02",revenue:2975.47,txns:87},{month:"2025-03",revenue:4560.01,txns:103},
+    {month:"2025-04",revenue:3835.22,txns:91},{month:"2025-05",revenue:3170.92,txns:86},
+    {month:"2025-06",revenue:2900.05,txns:70},{month:"2025-07",revenue:3036.56,txns:80}
+  ],
+  stores: [
+    {store_name:"GreenGrocer Plaza",revenue:9881,txns:232,avg_basket:42.59,discount_rate:0.121,loyalty_avg:258},
+    {store_name:"SuperSave Central",revenue:9860,txns:218,avg_basket:45.23,discount_rate:0.134,loyalty_avg:249},
+    {store_name:"City Fresh Store",revenue:9789,txns:220,avg_basket:44.50,discount_rate:0.119,loyalty_avg:261},
+    {store_name:"MegaMart Westside",revenue:9296,txns:214,avg_basket:43.44,discount_rate:0.127,loyalty_avg:254},
+    {store_name:"Corner Grocery",revenue:9286,txns:217,avg_basket:42.79,discount_rate:0.130,loyalty_avg:248},
+    {store_name:"ValuePlus Market",revenue:8661,txns:202,avg_basket:42.87,discount_rate:0.141,loyalty_avg:255},
+    {store_name:"FreshMart Downtown",revenue:8207,txns:193,avg_basket:42.52,discount_rate:0.122,loyalty_avg:262},
+    {store_name:"QuickStop Market",revenue:8183,txns:196,avg_basket:41.75,discount_rate:0.118,loyalty_avg:257},
+    {store_name:"FamilyFood Express",revenue:7719,txns:180,avg_basket:42.88,discount_rate:0.115,loyalty_avg:251}
+  ],
+  aisles: [
+    {aisle:"Personal Care",revenue:8289,units:339},{aisle:"Snacks & Candy",revenue:8067,units:355},
+    {aisle:"Canned Goods",revenue:8047,units:345},{aisle:"Health & Wellness",revenue:7905,units:327},
+    {aisle:"Beverages",revenue:7820,units:341},{aisle:"Bakery",revenue:7561,units:325},
+    {aisle:"Dairy",revenue:7383,units:341},{aisle:"Frozen Foods",revenue:7178,units:329},
+    {aisle:"Household Items",revenue:6900,units:310},{aisle:"Meat & Seafood",revenue:6791,units:319},
+    {aisle:"Produce",revenue:6095,units:295}
+  ],
+  discounts: [
+    {aisle:"Beverages",rate:14.3},{aisle:"Canned Goods",rate:14.2},{aisle:"Bakery",rate:14.0},
+    {aisle:"Frozen Foods",rate:13.8},{aisle:"Snacks & Candy",rate:13.4},{aisle:"Dairy",rate:12.9},
+    {aisle:"Health & Wellness",rate:12.0},{aisle:"Personal Care",rate:11.9},
+    {aisle:"Household Items",rate:11.9},{aisle:"Produce",rate:11.2},{aisle:"Meat & Seafood",rate:11.0}
+  ],
+  products: [
+    {product_name:"Tomatoes",aisle:"Produce",revenue:5381.7,units:366,txns:126},
+    {product_name:"Bread",aisle:"Bakery",revenue:5349.4,units:359,txns:121},
+    {product_name:"Potatoes",aisle:"Produce",revenue:5306.2,units:353,txns:118},
+    {product_name:"Chicken Breast",aisle:"Meat & Seafood",revenue:5172.9,units:379,txns:131},
+    {product_name:"Eggs",aisle:"Dairy",revenue:4825.6,units:333,txns:114},
+    {product_name:"Bananas",aisle:"Produce",revenue:4710.8,units:317,txns:102},
+    {product_name:"Cereal",aisle:"Snacks & Candy",revenue:4691.4,units:336,txns:113},
+    {product_name:"Pasta",aisle:"Canned Goods",revenue:4625.7,units:304,txns:99},
+    {product_name:"Onions",aisle:"Produce",revenue:4611.8,units:342,txns:127},
+    {product_name:"Orange Juice",aisle:"Beverages",revenue:4601.1,units:331,txns:112},
+    {product_name:"Apples",aisle:"Produce",revenue:4555.6,units:322,txns:103},
+    {product_name:"Salmon",aisle:"Meat & Seafood",revenue:4415.3,units:336,txns:113},
+    {product_name:"Rice",aisle:"Canned Goods",revenue:4382.4,units:312,txns:98},
+    {product_name:"Yogurt",aisle:"Dairy",revenue:4361.0,units:341,txns:109},
+    {product_name:"Cheese",aisle:"Dairy",revenue:4179.9,units:324,txns:105},
+    {product_name:"Milk",aisle:"Dairy",revenue:3830.8,units:294,txns:108},
+    {product_name:"Ground Beef",aisle:"Meat & Seafood",revenue:3671.3,units:258,txns:89},
+    {product_name:"Carrots",aisle:"Produce",revenue:3364.3,units:270,txns:92}
+  ]
+};
+
+const COLORS = ['#4f8ef7','#30d48a','#f7954f','#c084fc','#f472b6','#fbbf24','#67e8f9','#a78bfa','#4ade80','#fb923c','#e879f9'];
+const AISLE_COLORS = {
+  'Personal Care':'#4f8ef7','Snacks & Candy':'#f7954f','Canned Goods':'#30d48a',
+  'Health & Wellness':'#c084fc','Beverages':'#fbbf24','Bakery':'#f472b6',
+  'Dairy':'#67e8f9','Frozen Foods':'#a78bfa','Household Items':'#4ade80',
+  'Meat & Seafood':'#fb923c','Produce':'#e879f9'
+};
+
+function fmtCur(n){ return '$' + n.toLocaleString('en-US', {minimumFractionDigits:0,maximumFractionDigits:0}); }
+function fmtPct(n){ return (n*100).toFixed(1)+'%'; }
+
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if(id==='stores') renderStorePage();
+}
+
+let charts = {};
+function destroyChart(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+
+// ---- OVERVIEW ----
+function renderOverview(){
+  // Trend chart
+  const months = DATA.monthly.map(d=>d.month.replace('20','').replace('-',' '));
+  const revenues = DATA.monthly.map(d=>d.revenue);
+  const txns = DATA.monthly.map(d=>d.txns);
+  destroyChart('trendChart');
+  charts['trendChart'] = new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: {
+      labels: months,
+      datasets: [
+        {label:'Revenue',data:revenues,borderColor:'#4f8ef7',backgroundColor:'rgba(79,142,247,0.1)',fill:true,tension:0.3,pointRadius:3,pointBackgroundColor:'#4f8ef7',yAxisID:'y'},
+        {label:'Txns',data:txns,borderColor:'#30d48a',backgroundColor:'transparent',fill:false,tension:0.3,pointRadius:2,pointBackgroundColor:'#30d48a',borderDash:[4,3],yAxisID:'y2'}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#5c6478',font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:9}},
+        y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#5c6478',font:{size:10},callback:v=>'$'+Math.round(v/1000)+'k'},position:'left'},
+        y2:{grid:{display:false},ticks:{color:'#5c6478',font:{size:10}},position:'right'}
+      }
+    }
+  });
+
+  // Donut
+  const aisleLabels = DATA.aisles.map(a=>a.aisle);
+  const aisleRevs = DATA.aisles.map(a=>a.revenue);
+  const totalAisle = aisleRevs.reduce((a,b)=>a+b,0);
+  destroyChart('aisleDonut');
+  charts['aisleDonut'] = new Chart(document.getElementById('aisleDonut'), {
+    type:'doughnut',
+    data:{
+      labels:aisleLabels,
+      datasets:[{data:aisleRevs,backgroundColor:aisleLabels.map(a=>AISLE_COLORS[a]||'#888'),borderColor:'#161b27',borderWidth:2}]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>' '+ctx.label+': $'+ctx.raw.toLocaleString()+' ('+((ctx.raw/totalAisle)*100).toFixed(1)+'%)'}}
+      },
+      cutout:'62%'
+    }
+  });
+
+  // Store table
+  const maxRev = Math.max(...DATA.stores.map(s=>s.revenue));
+  const tbody = document.getElementById('storeTable');
+  tbody.innerHTML = DATA.stores.map((s,i)=>{
+    const pct = ((s.revenue/DATA.kpis.total_revenue)*100).toFixed(1);
+    const rc = i===0?'r1':i===1?'r2':i===2?'r3':'';
+    return `<tr>
+      <td><span class="rank ${rc}">${i+1}</span></td>
+      <td style="font-weight:500">${s.store_name}</td>
+      <td class="num">${fmtCur(s.revenue)}</td>
+      <td>
+        <div class="bar-cell">
+          <div class="bar-track"><div class="bar-fill" style="width:${(s.revenue/maxRev*100).toFixed(0)}%;background:var(--accent1)"></div></div>
+          <span class="bar-val" style="font-size:11px;color:var(--text2)">${pct}%</span>
+        </div>
+      </td>
+      <td class="num muted">${s.txns}</td>
+    </tr>`;
+  }).join('');
+
+  // Discount bars
+  const maxDisc = Math.max(...DATA.discounts.map(d=>d.rate));
+  document.getElementById('discountBars').innerHTML = DATA.discounts.map(d=>{
+    const color = d.rate > 13.5 ? '#f87171' : d.rate > 12.5 ? '#fbbf24' : '#30d48a';
+    return `<div class="seg-item">
+      <div class="seg-header">
+        <span style="color:var(--text)">${d.aisle}</span>
+        <span style="font-weight:600;color:${color}">${d.rate}%</span>
+      </div>
+      <div class="seg-track"><div class="seg-fill" style="width:${(d.rate/maxDisc*100).toFixed(0)}%;background:${color}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+// ---- STORE PAGE ----
+function renderStorePage(){
+  const metric = document.getElementById('storeMetric')?.value || 'revenue';
+  const labels = DATA.stores.map(s=>s.store_name.replace(' ','\n'));
+  const vals = DATA.stores.map(s => metric === 'revenue' ? s.revenue : metric === 'txns' ? s.txns : s.avg_basket);
+  const maxVal = Math.max(...vals);
+
+  destroyChart('storeBarChart');
+  charts['storeBarChart'] = new Chart(document.getElementById('storeBarChart'), {
+    type:'bar',
+    data:{
+      labels: DATA.stores.map(s=>s.store_name),
+      datasets:[{data:vals,backgroundColor:DATA.stores.map((_,i)=>COLORS[i%COLORS.length]+'cc'),borderRadius:4,barPercentage:0.7}]
+    },
+    options:{
+      indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#5c6478',font:{size:10},callback:v=>metric==='revenue'?'$'+Math.round(v/1000)+'k':v}},
+        y:{grid:{display:false},ticks:{color:'#8b93a7',font:{size:11}}}
+      }
+    }
+  });
+
+  // Scorecards
+  const sc = document.getElementById('storeScorecards');
+  const top3 = DATA.stores.slice(0,3);
+  sc.innerHTML = top3.map((s,i)=>{
+    const icons = ['ti-trophy','ti-medal','ti-award'];
+    const cols = ['var(--gold)','#b0b5c0','#cd8a5a'];
+    return `<div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <i class="ti ${icons[i]}" style="color:${cols[i]};font-size:18px"></i>
+        <span style="font-weight:600;font-size:13px">${s.store_name}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px">
+        <span style="color:var(--text3)">Revenue</span><span style="text-align:right;font-weight:500">${fmtCur(s.revenue)}</span>
+        <span style="color:var(--text3)">Transactions</span><span style="text-align:right">${s.txns}</span>
+        <span style="color:var(--text3)">Avg Basket</span><span style="text-align:right">$${s.avg_basket.toFixed(2)}</span>
+        <span style="color:var(--text3)">Discount Rate</span><span style="text-align:right">${(s.discount_rate*100).toFixed(1)}%</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Full table
+  const tb = document.getElementById('storeFullTable');
+  const chainAvgDisc = 0.1255;
+  tb.innerHTML = DATA.stores.map(s=>{
+    const perfColor = s.revenue > 9500 ? 'var(--accent2)' : s.revenue > 8500 ? 'var(--accent1)' : 'var(--accent3)';
+    const perfLabel = s.revenue > 9500 ? 'Top Performer' : s.revenue > 8500 ? 'Strong' : 'Developing';
+    const discColor = s.discount_rate > chainAvgDisc ? 'var(--danger)' : 'var(--accent2)';
+    return `<tr>
+      <td style="font-weight:500">${s.store_name}</td>
+      <td class="num">${fmtCur(s.revenue)}</td>
+      <td class="num">${s.txns}</td>
+      <td class="num">$${s.avg_basket.toFixed(2)}</td>
+      <td class="num" style="color:${discColor}">${(s.discount_rate*100).toFixed(1)}%</td>
+      <td class="num">${s.loyalty_avg}</td>
+      <td><span class="tag" style="background:${perfColor}22;color:${perfColor}">${perfLabel}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ---- PRODUCT PAGE ----
+function renderProducts(){
+  // Aisle bar
+  destroyChart('aisleBarChart');
+  charts['aisleBarChart'] = new Chart(document.getElementById('aisleBarChart'), {
+    type:'bar',
+    data:{
+      labels: DATA.aisles.map(a=>a.aisle),
+      datasets:[{data:DATA.aisles.map(a=>a.revenue),backgroundColor:DATA.aisles.map(a=>AISLE_COLORS[a]||'#888')+'cc',borderRadius:4}]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{display:false},ticks:{color:'#5c6478',font:{size:10},maxRotation:35}},
+        y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#5c6478',font:{size:10},callback:v=>'$'+Math.round(v/1000)+'k'}}
+      }
+    }
+  });
+
+  // Scatter
+  const scatterData = DATA.products.map((p,i)=>({
+    x: p.units, y: p.revenue,
+    r: Math.max(5, p.txns/8),
+    label: p.product_name
+  }));
+  destroyChart('productScatter');
+  charts['productScatter'] = new Chart(document.getElementById('productScatter'), {
+    type:'bubble',
+    data:{datasets:[{data:scatterData,backgroundColor:DATA.products.map((_,i)=>COLORS[i%COLORS.length]+'99'),borderColor:DATA.products.map((_,i)=>COLORS[i%COLORS.length])}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{title:ctx=>ctx[0].raw.label,label:ctx=>`Units: ${ctx.raw.x} | Rev: $${ctx.raw.y.toFixed(0)} | Txns: ${Math.round(ctx.raw.r*8)}`}}},
+      scales:{
+        x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#5c6478',font:{size:10}},title:{display:true,text:'Units Sold',color:'#5c6478',font:{size:11}}},
+        y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#5c6478',font:{size:10},callback:v=>'$'+v},title:{display:true,text:'Revenue',color:'#5c6478',font:{size:11}}}
+      }
+    }
+  });
+
+  // Product table
+  const totalRev = DATA.products.reduce((a,b)=>a+b.revenue,0);
+  const tagMap = {'Produce':'tag-pink','Bakery':'tag-amber','Meat & Seafood':'tag-orange','Dairy':'tag-blue','Canned Goods':'tag-green','Beverages':'tag-amber','Snacks & Candy':'tag-orange'};
+  const tb = document.getElementById('productTable');
+  tb.innerHTML = DATA.products.map((p,i)=>`<tr>
+    <td><span class="rank ${i<3?['r1','r2','r3'][i]:''}">${i+1}</span></td>
+    <td style="font-weight:500">${p.product_name}</td>
+    <td><span class="tag ${tagMap[p.aisle]||'tag-blue'}">${p.aisle}</span></td>
+    <td class="num">${fmtCur(p.revenue)}</td>
+    <td class="num">${p.units.toLocaleString()}</td>
+    <td class="num">${p.txns}</td>
+    <td class="num">$${(p.revenue/p.units).toFixed(2)}</td>
+    <td>
+      <div class="bar-cell">
+        <div class="bar-track"><div class="bar-fill" style="width:${(p.revenue/totalRev*100*3.5).toFixed(0)}%;background:var(--accent2)"></div></div>
+        <span class="bar-val">${(p.revenue/totalRev*100).toFixed(1)}%</span>
+      </div>
+    </td>
+  </tr>`).join('');
+}
+
+// ---- CUSTOMER PAGE ----
+function renderCustomers(){
+  // RFM donut
+  destroyChart('rfmChart');
+  charts['rfmChart'] = new Chart(document.getElementById('rfmChart'), {
+    type:'doughnut',
+    data:{
+      labels:['One-Time Buyers','Occasional (2 visits)','Regular (3 visits)','Champions (4+ visits)'],
+      datasets:[{data:[1632,133,25,8],backgroundColor:['#4f8ef7','#30d48a','#fbbf24','#f7954f'],borderColor:'#161b27',borderWidth:2}]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.raw} customers (${(ctx.raw/1798*100).toFixed(1)}%)`}}
+      },
+      cutout:'55%'
+    }
+  });
+  // Legend
+  const rfmLegend = [
+    {label:'One-Time Buyers',val:'1,632',pct:'90.8%',color:'#4f8ef7'},
+    {label:'Occasional (2 visits)',val:'133',pct:'7.4%',color:'#30d48a'},
+    {label:'Regular (3 visits)',val:'25',pct:'1.4%',color:'#fbbf24'},
+    {label:'Champions (4+ visits)',val:'8',pct:'0.4%',color:'#f7954f'}
+  ];
+
+  // Basket histogram
+  const histBins = ['$0-15','$15-30','$30-50','$50-75','$75-100','$100-150','$150+'];
+  const histData = [195, 420, 570, 460, 220, 100, 15];
+  destroyChart('basketHist');
+  charts['basketHist'] = new Chart(document.getElementById('basketHist'), {
+    type:'bar',
+    data:{labels:histBins,datasets:[{data:histData,backgroundColor:'#4f8ef788',borderColor:'#4f8ef7',borderWidth:1,borderRadius:3}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{display:false},ticks:{color:'#5c6478',font:{size:10}}},
+        y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#5c6478',font:{size:10}},title:{display:true,text:'Customers',color:'#5c6478',font:{size:11}}}
+      }
+    }
+  });
+
+  // Loyalty by aisle
+  const loyaltyData = [
+    {aisle:'Meat & Seafood',avg:287},{aisle:'Health & Wellness',avg:275},{aisle:'Personal Care',avg:268},
+    {aisle:'Dairy',avg:262},{aisle:'Bakery',avg:258},{aisle:'Produce',avg:251},
+    {aisle:'Frozen Foods',avg:248},{aisle:'Beverages',avg:261},{aisle:'Canned Goods',avg:254},
+    {aisle:'Household Items',avg:245},{aisle:'Snacks & Candy',avg:239}
+  ].sort((a,b)=>b.avg-a.avg);
+  const maxLoy = Math.max(...loyaltyData.map(d=>d.avg));
+  document.getElementById('loyaltyBars').innerHTML = loyaltyData.map(d=>`
+    <div class="seg-item">
+      <div class="seg-header">
+        <span style="color:var(--text)">${d.aisle}</span>
+        <span style="font-weight:600;color:var(--gold)">${d.avg} pts</span>
+      </div>
+      <div class="seg-track"><div class="seg-fill" style="width:${(d.avg/maxLoy*100).toFixed(0)}%;background:var(--gold)"></div></div>
+    </div>`).join('');
+}
+
+// INIT
+document.addEventListener('DOMContentLoaded', ()=>{
+  renderOverview();
+  renderProducts();
+  renderCustomers();
+});
+</script>
+</body>
+</html>
